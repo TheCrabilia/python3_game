@@ -1,20 +1,13 @@
 import pygame as pg
-from enum import Enum
 from colors import *
-
-
-class Direction(Enum):
-    UP = 0
-    RIGHT = 1
-    DOWN = 2
-    LEFT = 3
+from enums import *
 
 
 class GameWindow:
-    def __init__(self, size):
-        self.size = size
-        self.screen = pg.display.set_mode(self.size)
-        self.players = [Player(50, 50, 10, 10, RED), Player(100, 100, 10, 15, GREEN)]
+    def __init__(self, size: tuple):
+        self.height, self.width = size
+        self.screen = pg.display.set_mode((self.height, self.width))
+        self.players = [Player(position=(50, 50), radius=10, color=RED)]
 
     def main_loop(self):
         finished = False
@@ -28,13 +21,13 @@ class GameWindow:
             # Move events for all players
             for player in self.players:
                 keys = pg.key.get_pressed()
-                if keys[pg.K_LEFT]:
+                if keys[pg.K_LEFT] and player.x > player.radius:
                     player.move(Direction.LEFT)
-                if keys[pg.K_RIGHT]:
+                if keys[pg.K_RIGHT] and player.x < (self.width - player.radius):
                     player.move(Direction.RIGHT)
-                if keys[pg.K_UP]:
+                if keys[pg.K_UP] and player.y > player.radius:
                     player.move(Direction.UP)
-                if keys[pg.K_DOWN]:
+                if keys[pg.K_DOWN] and player.y < (self.height - player.radius):
                     player.move(Direction.DOWN)
 
             self.screen.fill((255, 255, 255))
@@ -45,10 +38,16 @@ class GameWindow:
 
             pg.display.update()
 
+    def get_height(self):
+        return self.height
+
+    def git_width(self):
+        return self.width
+
 
 class Player:
-    def __init__(self, x, y, radius, speed, color):
-        self.x, self.y = x, y
+    def __init__(self, position: tuple, radius: int, color: tuple, speed: int = 10):
+        self.x, self.y = position
         self.radius = radius
         self.speed = speed
         self.color = color
