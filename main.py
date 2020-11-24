@@ -38,7 +38,7 @@ class GameWindow:
         pg.display.set_caption("Simple game")
 
         finished = False
-        obstacle_speed_incrementation_segments = [i for i in range(100000) if i % 1000 == 0]
+        obstacle_speed_incrementation_segments = [i for i in range(100000) if i % 1000 == 0 and i != 0]
 
         # Game loop
         while not finished:
