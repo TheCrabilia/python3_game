@@ -5,7 +5,8 @@ from colors import *
 
 class GameWindow:
     """
-    Game window class. Contains main game loop.
+    Game window class. Contains main game loop. Updates objects on the screen. Spawns new obstacles and destroys them.
+    Processes collision detection. Processes game points incrementation.
     """
 
     def __init__(self, size: tuple):
@@ -16,7 +17,9 @@ class GameWindow:
         self.score_widget = Score(position=(700, 20), font_size=32, bg_color=GRAY)
 
         self._obstacles = []
-        self.obstacle_spawn_delay = 60
+        self._obstacle_spawn_delay_limit = 50
+        self._obstacle_spawn_delay = 50
+        self.obstacle_speed = 6
 
         self.game_over = False
 
@@ -26,7 +29,7 @@ class GameWindow:
         """
         # Set clock (FPS)
         clock = pg.time.Clock()
-        fps = 30
+        fps = 60
 
         # Initialize pygame
         pg.init()
@@ -35,6 +38,7 @@ class GameWindow:
         pg.display.set_caption("Simple game")
 
         finished = False
+        obstacle_speed_incrementation_segments = [i for i in range(100000) if i % 1000 == 0]
 
         # Game loop
         while not finished:
@@ -63,6 +67,15 @@ class GameWindow:
 
                 self.detect_collision()
                 self.spawn_new_obstacle()
+                self.score_widget.increment_points()
+                if self.score_widget.get_points() in obstacle_speed_incrementation_segments:
+                    # Increment speed for new obstacles
+                    self.obstacle_speed += 2
+                    # Increment speed for existing obstacles
+                    for obstacle in self._obstacles:
+                        obstacle.increment_speed()
+                    # Decrease obstacle spawn delay
+                    self._obstacle_spawn_delay_limit -= 2
             else:
                 Text(text="Game Over", position=(self.width / 2 - 150, self.height / 2 - 50),
                      font_size=50, bg_color=GRAY).draw(self.screen)
@@ -84,16 +97,16 @@ class GameWindow:
         self.score_widget.draw(self.screen)
 
     def spawn_new_obstacle(self):
-        if self.obstacle_spawn_delay == 60:
+        if self._obstacle_spawn_delay == self._obstacle_spawn_delay_limit:
             dimensions = [(20, 60), (20, 20)]
-            random_dimensions = random.choices(dimensions, weights=(70, 45), k=1)
+            random_dimensions = random.choices(dimensions, weights=(70, 30), k=1)
             # Create new obstacle
             new_obstacle = Obstacle(position=(self.width + 20, self.height - 70),
-                                    dimensions=random_dimensions[0], color=BLACK)
+                                    dimensions=random_dimensions[0], color=BLACK, speed=self.obstacle_speed)
             self._obstacles.append(new_obstacle)
-            self.obstacle_spawn_delay = 0
+            self._obstacle_spawn_delay = 0
         else:
-            self.obstacle_spawn_delay += 1
+            self._obstacle_spawn_delay += 1
 
     def destroy_obstacle(self):
         if len(self._obstacles) != 0:
@@ -104,8 +117,8 @@ class GameWindow:
         player_x, player_y, player_radius = self.player.get_metrics()
         for obstacle in self._obstacles:
             obstacle_x, obstacle_y, obstacle_width, obstacle_height = obstacle.get_metrics()
-            if obstacle_y <= (player_y + player_radius) <= (obstacle_y + obstacle_height):
-                if obstacle_x <= (player_x + player_radius) <= (obstacle_x + obstacle_width):
+            if obstacle_y <= (player_y + (player_radius - 2)) <= (obstacle_y + obstacle_height):
+                if obstacle_x <= (player_x + (player_radius - 2)) <= (obstacle_x + obstacle_width):
                     self.game_over = True
 
 
@@ -151,15 +164,14 @@ class Player:
 
 
 class Obstacle:
-    def __init__(self, position: tuple, dimensions: tuple, color: tuple):
+    def __init__(self, position: tuple, dimensions: tuple, color: tuple, speed: int):
         self.x, self.y = position
         self.width, self.height = dimensions
-        self.color = color
-
-        self._speed = 10
+        self._color = color
+        self._speed = speed
 
     def draw(self, screen):
-        pg.draw.rect(screen, self.color, (self.x, self.y, self.width, self.height))
+        pg.draw.rect(screen, self._color, (self.x, self.y, self.width, self.height))
 
     def move(self):
         self.x -= self._speed
@@ -169,6 +181,9 @@ class Obstacle:
 
     def get_metrics(self):
         return self.x, self.y, self.width, self.height
+
+    def increment_speed(self):
+        self._speed += 2
 
 
 class Text:
@@ -199,7 +214,7 @@ class Score(Text):
         self.text = self.prefix + str(self.points)
         super().__init__(self.text, position, font_size, fg_color, bg_color)
 
-    def increment_score(self):
+    def increment_points(self):
         self.points += 1
         self.text = self.prefix + str(self.points)
         self.rendered_text = self.font.render(self.text, True, self.fg_color, self.bg_color)
